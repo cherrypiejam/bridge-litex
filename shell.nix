@@ -7,7 +7,6 @@ with pkgs;
 
 let
   litexPkgs = import ./litex-pkgs.nix { inherit pkgs skipLitexPkgChecks; };
-
 in
   pkgs.mkShell {
     name = "litex-shell";
@@ -23,7 +22,12 @@ in
       litespi
       litepcie
       litehyperbus
-      pythondata-cpu-vexriscv pkgsCross.riscv64-embedded.buildPackages.gcc gnumake
+      pythondata-cpu-vexriscv
+      pythondata-cpu-vexriscv_smp
+      litexPkgs.pythondata-cpu-ibex
+      pkgsCross.riscv64-embedded.buildPackages.gcc
+      gnumake
+      sbt
 
       # For simulation
       pythondata-misc-tapcfg libevent json_c zlib verilator python3Packages.pyvcd

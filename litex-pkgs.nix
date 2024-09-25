@@ -33,14 +33,15 @@ let
   # - https://github.com/lschuermann/nix-litex.git
   # - https://git.currently.online/leons/nix-litex.git
   #
-  nixLitexSrc = builtins.fetchGit {
-    # Temporary downtime of git.sr.ht, see
-    # https://status.sr.ht/issues/2023-01-10-network-outage/
-    #url = "https://git.sr.ht/~lschuermann/nix-litex";
-    url = "https://git.currently.online/leons/nix-litex.git";
-    ref = "main";
-    rev = "75fb0a2b9be43f43b8b14a2f0fd437ebdd8ba76f";
-  };
+  # nixLitexSrc = builtins.fetchGit {
+  #   # Temporary downtime of git.sr.ht, see
+  #   # https://status.sr.ht/issues/2023-01-10-network-outage/
+  #   #url = "https://git.sr.ht/~lschuermann/nix-litex";
+  #   url = "https://git.currently.online/leons/nix-litex.git";
+  #   ref = "main";
+  #   rev = "75fb0a2b9be43f43b8b14a2f0fd437ebdd8ba76f";
+  # };
+  nixLitexSrc = ../../litex/nix-litex;
 
   litexPackages = import "${nixLitexSrc}/pkgs" {
     inherit pkgs;
@@ -66,7 +67,7 @@ let
     in
       # Now, inject our custom packages in the resulting attribute set
       upstream // {
-        # Override the CPU to add the TockSecureIMC variant patch:
+        # # Override the CPU to add the TockSecureIMC variant patch:
         pythondata-cpu-vexriscv = (upstream.pythondata-cpu-vexriscv.override ({
           generated = upstream.pythondata-cpu-vexriscv.generated.overrideAttrs (prev: {
             # This patched revision is based on the upstream pythondata-cpu-vexriscv
@@ -82,24 +83,82 @@ let
           });
         }));
 
+        # Override the VexRiscv SMP CPU
+        pythondata-cpu-vexriscv_smp = (upstream.pythondata-cpu-vexriscv_smp.override (_: {
+          generated = upstream.pythondata-cpu-vexriscv_smp.generated.overrideAttrs (prev: {
+
+            src = ./../pythondata-cpu-vexriscv_smp;
+
+            # buildInputs = [ pkgs.scala_2_12 ];
+
+            # src = builtins.fetchGit {
+            #   url = "https://github.com/cherrypiejam/pythondata-cpu-vexriscv_smp";
+            #   ref = "refs/heads/master";
+            #   rev = "9da054f1d3aa73e20dfa570619e84e858fcb8687";
+            #   submodules = true;
+            # };
+
+            # prePatch = ''
+            #   pushd pythondata_cpu_vexriscv_smp/verilog/ext/VexRiscv/
+            #   patch -p1 --merge < ${pkgs.writeText "vexriscv-DBusCachedPlugin-formal.patch" (
+            #     builtins.readFile ./patches/vexriscv-DBusCachedPlugin-0001-Add-formal-support.patch
+            #   )}
+            #   patch -p1 --merge < ${pkgs.writeText "vexriscv-VexRiscvSmpLitexCluster-formal.patch" (
+            #     builtins.readFile ./patches/vexriscv-VexRiscvSmpLitexCluster-0002-Add-formal-support-in-SMP-cluster.patch
+            #   )}
+            #   patch -p1 --merge < ${pkgs.writeText "vexriscv-VexRiscvSmpLitexCluster-RVFI.patch" (
+            #     builtins.readFile ./patches/vexriscv-VexRiscvSmpLitexCluster-0003-Aggregate-RVFI-signals-across-cores-in-SMP.patch
+            #   )}
+            #   patch -p1 --merge < ${pkgs.writeText "vexriscv-VexRiscvSmpLitexCluster-PMP.patch" (
+            #     builtins.readFile ./patches/vexriscv-VexRiscvSmpLitexCluster-0004-Add-PMP-support-in-Vexriscv-SMP-cluster-generator.patch
+            #   )}
+            #   popd
+            # '';
+          });
+        }));
+
         # Override LiteX to include support for the TockSecureIMC
         # CPU variant:
         litex-unchecked = upstream.litex-unchecked.overrideAttrs (prev: {
-          patches = (prev.patches or [ ]) ++ [
-            ./litex_add_TockSecureIMC_CPU.patch
-            ./litex_disable_TFTP_block_size_negotiation.patch
-          ];
+          src = ../../litex/litex;
+          # patches = (prev.patches or [ ]) ++ [
+          #   ./litex_add_TockSecureIMC_CPU.patch
+          #   ./litex_disable_TFTP_block_size_negotiation.patch
+          #   ./patches/litex-0001-Add-formal-support-in-vexriscv-smp.patch
+          #   ./patches/litex-0002-Add-default-build-with-formal-enabled-and-wishbone-memory.patch
+          #   ./patches/litex-0004-Add-default-build-with-pmp-support.patch
+          #   ./patches/litex-0005-Build-with-rvc-by-default.patch
+          # ];
         });
 
-        litex-boards-unchecked = upstream.litex-boards-unchecked.overrideAttrs (prev: {
-          # Unfortunately, the upstream nix-litex overrides the
-          # patchPhase for litex-boards, which prevents us from
-          # specifying patches here. In the meantime, apply the patch
-          # manually:
-          patchPhase = ''
-            patch -p1 <${./litex-boards_targets-arty-add-option-to-set-with_buttons.patch}
-          '' + (prev.patchPhase or "");
-        });
+        pythondata-cpu-ibex = super.buildPythonPackage rec {
+          pname = "pythondata-cpu-ibex";
+          version = "2bccf45b93770cd9e839c65276d1117123c77a34";
+
+          src = builtins.fetchGit {
+            url = "https://github.com/litex-hub/pythondata-cpu-ibex";
+            rev = version;
+            submodules = true;
+          };
+
+          patch = [
+            # Patch the ibex_tracer.sv module to statically enable trace logging:
+            ./patches/pythondata-cpu-ibex-0001-rtl-ibex_tracer.sv-statically-enable-trace-logging.patch
+          ];
+
+          # Tests are broken currently.
+          doCheck = false;
+        };
+
+        # litex-boards-unchecked = upstream.litex-boards-unchecked.overrideAttrs (prev: {
+        #   # Unfortunately, the upstream nix-litex overrides the
+        #   # patchPhase for litex-boards, which prevents us from
+        #   # specifying patches here. In the meantime, apply the patch
+        #   # manually:
+        #   patchPhase = ''
+        #     patch -p1 <${./litex-boards_targets-arty-add-option-to-set-with_buttons.patch}
+        #   '' + (prev.patchPhase or "");
+        # });
       };
 
   applyOverlay = python: python.override {
@@ -118,7 +177,7 @@ let
         ${elem} = extended.python3Packages.${elem};
       })
       { }
-      (builtins.attrNames litexPackages.packages)
+      ((builtins.attrNames litexPackages.packages) ++ [ "pythondata-cpu-ibex" ])
     ) // {
       # Maintenance scripts for working with the TOML files in this repo
       maintenance = litexPackages.maintenance;

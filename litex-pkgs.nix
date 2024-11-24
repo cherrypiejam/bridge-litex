@@ -34,12 +34,10 @@ let
   # - https://git.currently.online/leons/nix-litex.git
   #
   nixLitexSrc = builtins.fetchGit {
-    # Temporary downtime of git.sr.ht, see
-    # https://status.sr.ht/issues/2023-01-10-network-outage/
-    #url = "https://git.sr.ht/~lschuermann/nix-litex";
-    url = "https://git.currently.online/leons/nix-litex.git";
+    # Use latest nix-litex version
+    url = "https://git.sr.ht/~cherrypiejam/nix-litex";
     ref = "main";
-    rev = "75fb0a2b9be43f43b8b14a2f0fd437ebdd8ba76f";
+    rev = "80fd113486b6aa0e1cfea3115f15fa6756a73bfa";
   };
 
   litexPackages = import "${nixLitexSrc}/pkgs" {
@@ -86,8 +84,8 @@ let
         # CPU variant:
         litex-unchecked = upstream.litex-unchecked.overrideAttrs (prev: {
           patches = (prev.patches or [ ]) ++ [
-            ./litex_add_TockSecureIMC_CPU.patch
-            ./litex_disable_TFTP_block_size_negotiation.patch
+            ./patches/litex_add_TockSecureIMC_CPU.patch
+            ./patches/litex_disable_TFTP_block_size_negotiation.patch
           ];
         });
 
@@ -97,7 +95,7 @@ let
           # specifying patches here. In the meantime, apply the patch
           # manually:
           patchPhase = ''
-            patch -p1 <${./litex-boards_targets-arty-add-option-to-set-with_buttons.patch}
+            patch -p1 <${./patches/litex-boards_targets-arty-add-option-to-set-with_buttons.patch}
           '' + (prev.patchPhase or "");
         });
       };

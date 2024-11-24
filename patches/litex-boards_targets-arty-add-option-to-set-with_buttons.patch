@@ -1,0 +1,32 @@
+From 532ae635dfcb37071b122afb61848f35dd055072 Mon Sep 17 00:00:00 2001
+From: Gongqi Huang <gongqih@hotmail.com>
+Date: Tue, 12 Nov 2024 16:52:51 -0500
+Subject: [PATCH] targets/arty: add option to set with_buttons
+
+---
+ litex_boards/targets/digilent_arty.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/litex_boards/targets/digilent_arty.py b/litex_boards/targets/digilent_arty.py
+index 6521ced..350b499 100755
+--- a/litex_boards/targets/digilent_arty.py
++++ b/litex_boards/targets/digilent_arty.py
+@@ -201,6 +201,7 @@ def main():
+     parser.add_target_argument("--sys-clk-freq",   default=100e6, type=float, help="System clock frequency.")
+     parser.add_target_argument("--with-xadc",      action="store_true",       help="Enable 7-Series XADC.")
+     parser.add_target_argument("--with-dna",       action="store_true",       help="Enable 7-Series DNA.")
++    parser.add_target_argument("--with-buttons",   action="store_true",       help="Enable User Buttons.")
+     parser.add_target_argument("--with-usb",       action="store_true",       help="Enable USB Host.")
+     parser.add_target_argument("--with-ethernet",  action="store_true",       help="Enable Ethernet support.")
+     parser.add_target_argument("--with-etherbone", action="store_true",       help="Enable Etherbone support.")
+@@ -232,6 +233,7 @@ def main():
+         with_usb       = args.with_usb,
+         with_spi_flash = args.with_spi_flash,
+         with_pmod_gpio = args.with_pmod_gpio,
++        with_buttons   = args.with_buttons,
+         with_can       = args.with_can,
+         **parser.soc_argdict
+     )
+-- 
+2.44.2
+

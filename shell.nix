@@ -24,6 +24,7 @@ in
       litepcie
       litehyperbus
       pythondata-cpu-vexriscv pkgsCross.riscv64-embedded.buildPackages.gcc gnumake
+      pythondata-cpu-vexriscv_bridge
 
       # For simulation
       pythondata-misc-tapcfg libevent json_c zlib verilator python3Packages.pyvcd

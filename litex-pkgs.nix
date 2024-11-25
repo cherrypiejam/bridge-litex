@@ -33,12 +33,13 @@ let
   # - https://github.com/lschuermann/nix-litex.git
   # - https://git.currently.online/leons/nix-litex.git
   #
-  nixLitexSrc = builtins.fetchGit {
-    # Use latest nix-litex version
-    url = "https://git.sr.ht/~cherrypiejam/nix-litex";
-    ref = "main";
-    rev = "80fd113486b6aa0e1cfea3115f15fa6756a73bfa";
-  };
+  # nixLitexSrc = builtins.fetchGit {
+  #   # Use latest nix-litex version
+  #   url = "https://git.sr.ht/~cherrypiejam/nix-litex";
+  #   ref = "main";
+  #   rev = "80fd113486b6aa0e1cfea3115f15fa6756a73bfa";
+  # };
+  nixLitexSrc = ../../litex/nix-litex;
 
   litexPackages = import "${nixLitexSrc}/pkgs" {
     inherit pkgs;
@@ -80,9 +81,29 @@ let
           });
         }));
 
+        pythondata-cpu-vexriscv_bridge =
+          self.callPackage (import ./pythondata-cpu-vexriscv_bridge rec {
+            src = ../pythondata-cpu-vexriscv_bridge;
+            version = "1337";
+              # src = builtins.fetchGit {
+              #   url = "https://github.com/cherrypiejam/pythondata-cpu-vexriscv_bridge";
+              #   ref = "refs/heads/bridge";
+              #   rev = "b33376ebc5209bae51cda8f11773395db28fd4fc";
+              #   submodules = true;
+              # };
+            # version = src.rev;
+            depsSha256 = "sha256-66FgLWjX69NjIrCSC9nT2o1ZFE+i5F8aN8bQdIQLJDU=";
+          }) { };
+
         # Override LiteX to include support for the TockSecureIMC
         # CPU variant:
         litex-unchecked = upstream.litex-unchecked.overrideAttrs (prev: {
+          src = ../litex;
+          # src = builtins.fetchGit {
+          #   url = "https://github.com/cherrypiejam/litex";
+          #   rev = "3483911fd30bafc13e9a5366e48c3e9779f6d191";
+          #   submodules = true;
+          # };
           patches = (prev.patches or [ ]) ++ [
             ./patches/litex_add_TockSecureIMC_CPU.patch
             ./patches/litex_disable_TFTP_block_size_negotiation.patch
@@ -116,7 +137,7 @@ let
         ${elem} = extended.python3Packages.${elem};
       })
       { }
-      (builtins.attrNames litexPackages.packages)
+      ((builtins.attrNames litexPackages.packages) ++ [ "pythondata-cpu-vexriscv_bridge" ])
     ) // {
       # Maintenance scripts for working with the TOML files in this repo
       maintenance = litexPackages.maintenance;
@@ -125,7 +146,5 @@ let
       # of the boards defined in this repo.
       inherit vivado;
     };
-
-
 in
   pkgSet

@@ -10,7 +10,6 @@ mkSbtDerivation rec {
   version = pkgMeta.version;
 
   src = pkgMeta.src;
-  # src = /home/cherrypie/hack/bridge/pythondata-cpu-vexriscv_smp;
 
   # sbt needs to compile at least one file in order to download all the
   # dependencies, but we don't want it to compile all of the project in order
@@ -24,7 +23,7 @@ mkSbtDerivation rec {
       xargs -0 -I{} bash -c 'rm -rf {}/../../src && mkdir -p {}/scala && touch {}/scala/dummy.scala'
 
     # ask sbt to compile the main project
-    pushd pythondata_cpu_vexriscv_smp/verilog/ext/VexRiscv
+    pushd pythondata_cpu_vexriscv_bridge/verilog/ext/VexRiscv
     sbt compile
     popd
   '';
@@ -40,7 +39,7 @@ mkSbtDerivation rec {
     runHook preBuild
 
     # delete old CPU variant sources
-    rm -f pythondata_cpu_vexriscv_smp/verilog/VexRiscv*.v
+    rm -f pythondata_cpu_vexriscv_bridge/verilog/VexRiscv*.v
 
     # rebuild all CPU variants
     ${pythonEnv}/bin/python generate.py
@@ -58,7 +57,7 @@ mkSbtDerivation rec {
     # remove build artifacts
     find . -wholename "*/src/main" -print0 | \
       xargs -0 -I{} bash -c 'rm -rf {}/../../{target,project/project,project/target}'
-    rm -rf pythondata_cpu_vexriscv_smp/verilog/ext/SpinalHDL/project/{project,target}
+    rm -rf pythondata_cpu_vexriscv_bridge/verilog/ext/SpinalHDL/project/{project,target}
 
     # VexRiscv writes the current timestamp into the generated
     # output, which breaks reproducibility. Remove it.

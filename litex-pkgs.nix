@@ -84,7 +84,7 @@ let
         pythondata-cpu-vexriscv_bridge =
           self.callPackage (import ./pythondata-cpu-vexriscv_bridge rec {
             src = ../pythondata-cpu-vexriscv_bridge;
-            version = "1337";
+            version = "1338";
               # src = builtins.fetchGit {
               #   url = "https://github.com/cherrypiejam/pythondata-cpu-vexriscv_bridge";
               #   ref = "refs/heads/bridge";
@@ -92,7 +92,7 @@ let
               #   submodules = true;
               # };
             # version = src.rev;
-            depsSha256 = "sha256-66FgLWjX69NjIrCSC9nT2o1ZFE+i5F8aN8bQdIQLJDU=";
+            depsSha256 = "sha256-Bz71J6dd+d45hAIc5PNY7BTpuACpPiospaSr9bPJ0go=";
           }) { };
 
         # Override LiteX to include support for the TockSecureIMC

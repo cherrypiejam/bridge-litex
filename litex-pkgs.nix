@@ -81,6 +81,7 @@ let
           });
         }));
 
+        # Add the VexRiscv Bridge SMP CPU cluster
         pythondata-cpu-vexriscv_bridge =
           self.callPackage (import ./pythondata-cpu-vexriscv_bridge rec {
             src = ../pythondata-cpu-vexriscv_bridge;
@@ -94,6 +95,28 @@ let
             # version = src.rev;
             depsSha256 = "sha256-Bz71J6dd+d45hAIc5PNY7BTpuACpPiospaSr9bPJ0go=";
           }) { };
+
+        # We require the pythondata-cpu-ibex, as it contains the CSV tracer
+        # module (although eventually we'd of course like to log to DRAM
+        # instead).
+        pythondata-cpu-ibex = super.buildPythonPackage rec {
+          pname = "pythondata-cpu-ibex";
+          version = "2bccf45b93770cd9e839c65276d1117123c77a34";
+
+          src = builtins.fetchGit {
+            url = "https://github.com/litex-hub/pythondata-cpu-ibex";
+            rev = version;
+            submodules = true;
+          };
+
+          patch = [
+            # Patch the ibex_tracer.sv module to statically enable trace logging:
+            ./patches/pythondata-cpu-ibex-0001-rtl-ibex_tracer.sv-statically-enable-trace-logging.patch
+          ];
+
+          # Tests are broken currently.
+          doCheck = false;
+        };
 
         # Override LiteX to include support for the TockSecureIMC
         # CPU variant:
@@ -137,7 +160,11 @@ let
         ${elem} = extended.python3Packages.${elem};
       })
       { }
-      ((builtins.attrNames litexPackages.packages) ++ [ "pythondata-cpu-vexriscv_bridge" ])
+      ((builtins.attrNames litexPackages.packages)
+       ++ [
+         "pythondata-cpu-vexriscv_bridge"
+         "pythondata-cpu-ibex"
+       ])
     ) // {
       # Maintenance scripts for working with the TOML files in this repo
       maintenance = litexPackages.maintenance;

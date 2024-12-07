@@ -33,10 +33,19 @@ class BridgeSimShell(SimSoC, LiteXTarget):
             "--trace", action="store_true", default=False,
             help="Generate a FST trace file",
         )
+        parser.add_argument(
+            "--rom_init", action="store", default=None,
+            help="Initialize ROM from binary file (override default BIOS)",
+        )
+        parser.add_argument(
+            "--ram_init", action="store", default=None,
+            help="Initialize RAM from binary file",
+        )
 
-    def __init__(self, sys_clk_freq, trace):
 
-        # Configure VexRsicv Bridge cluster
+    def __init__(self, sys_clk_freq, trace, rom_init, ram_init):
+
+        # Configure VexRsicv Bridge cluster.
         cpu_parser = argparse.ArgumentParser()
         VexRiscvBridge.args_fill(cpu_parser)
         cpu_args = cpu_parser.parse_args([])
@@ -58,13 +67,13 @@ class BridgeSimShell(SimSoC, LiteXTarget):
 
         ##############
 
-        # Let's config our Bridge SoC now
+        # Let's config our Bridge SoC now.
 
         # Call the LiteXTarget constructor first to do any required
-        # basic initialization
+        # basic initialization.
         LiteXTarget.__init__(self)
 
-        # Clean and validate arguments
+        # Clean and validate arguments.
         sys_clk_freq = int(sys_clk_freq)
 
         # Call the regular SimSoC constructor, but modify some of the
@@ -84,7 +93,7 @@ class BridgeSimShell(SimSoC, LiteXTarget):
         # assert "uart_name" in soc_args
         soc_args["uart_name"] = "sim"
 
-        # Set the proper sys clock speed
+        # Set the proper sys clock speed.
         soc_args["sys_clk_freq"] = sys_clk_freq
 
         # Use VexRiscv Bridge CPU Cluster. The reset address is
@@ -96,14 +105,16 @@ class BridgeSimShell(SimSoC, LiteXTarget):
         # Instantiate a corssbar switch between CPU cores and
         # peripheral devices to eliminate cross-core interference.
         # NOTE: PLIC is connected to the master (?), we need to make
-        # sure cores interacting with the PLIC do not break our
+        # sure that cores interacting with the PLIC does not break our
         # promise.
         soc_args["bus_interconnect"] = "crossbar"
 
-        # Load our testing program into ROM. Here we pass filesystem
-        # path string, and SimSoc/SoCCore will flash it to the ROM and
-        # adjust its size accordingly upon initialization.
-        soc_args["integrated_rom_init"] = str(Path(__file__).parent.resolve() / "demo.bin")
+        # Load our testing program into ROM if provided. Here we pass
+        # filesystem path string, and SimSoc/SoCCore will flash it to
+        # the ROM and adjust its size accordingly upon initialization.
+        if (rom_init):
+            soc_args["integrated_rom_init"] = str(Path(__file__).parent.resolve() / rom_init)
+        boot_address = 0x0
 
         # Let's temporarily set the main RAM size to this value.
         soc_args["integrated_main_ram_size"] = 0x1000_0000
@@ -112,14 +123,24 @@ class BridgeSimShell(SimSoC, LiteXTarget):
         # real one.
         conf_soc = SimSoC(**soc_args)
 
-        # Instantiate the regular SimSoC
+        # Initialize RAM.
+        if (ram_init):
+            soc_args["integrated_main_ram_init"] = get_mem_data(
+                Path(__file__).parent.resolve() / ram_init,
+                data_width = conf_soc.bus.data_width,
+                endianness = conf_soc.cpu.endianness,
+                offset     = conf_soc.mem_map["main_ram"]
+            )
+
+        # If ROM image is not provided, let's boot from RAM.
+        if (not rom_init and ram_init):
+            boot_address = conf_soc.mem_map["main_ram"]
+
+        # Instantiate the regular SimSoC.
         SimSoC.__init__(self, **soc_args)
 
-        # Let's ROM boot our SoC!
-        self.add_constant(
-            "ROM_BOOT_ADDRESS",
-            get_boot_address(soc_args["integrated_rom_init"])
-        )
+        # Specify boot address.
+        self.add_constant("ROM_BOOT_ADDRESS", boot_address)
 
         # Create an RVFI bus instance and attach it to the CPU, as
         # well as the CPU clock and reset lines:
@@ -144,7 +165,7 @@ class BridgeSimShell(SimSoC, LiteXTarget):
 
         cpu_rvfi_slices = self.cpu_rvfi.slice_nret()
 
-        # Trace instructions into CSV file
+        # Trace instructions into CSV file.
         for ret_idx, cpu_rvfi in enumerate(cpu_rvfi_slices):
             setattr(self.submodules, f"tracer_{ret_idx}", IbexTracer(
                 cpu_rvfi,
@@ -152,7 +173,7 @@ class BridgeSimShell(SimSoC, LiteXTarget):
                 platform = self.platform,
             ))
 
-        # Store required parameters for the build phase
+        # Store required parameters for the build phase.
         self.build_args = {
             "default_builder_argdict": builder_argdict(litex_sim_parsed_dummy_args),
             "sys_clk_freq": sys_clk_freq,
@@ -186,7 +207,7 @@ class BridgeSimShell(SimSoC, LiteXTarget):
             trace_fst        = True,
             interactive      = True,
             pre_run_callback = pre_run_callback,
-            verbose = True,
+            verbose          = True,
         )
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ class BridgeSimShell(SimSoC, LiteXTarget):
         cpu_parser = argparse.ArgumentParser()
         VexRiscvBridge.args_fill(cpu_parser)
         cpu_args = cpu_parser.parse_args([])
-        cpu_args.cpu_count            = 1
+        cpu_args.cpu_count            = 2
         cpu_args.icache_width         = 32
         cpu_args.dcache_width         = 32
         cpu_args.dcache_size          = 4096
@@ -63,6 +63,8 @@ class BridgeSimShell(SimSoC, LiteXTarget):
         cpu_args.with_formal          = True
         cpu_args.with_supervisor      = False
         cpu_args.jtag_tap             = False
+        cpu_args.shared_region_base   = 0x4000_0000
+        cpu_args.shared_region_size   = 0x1000_0000
         VexRiscvBridge.args_read(cpu_args)
 
         ##############
